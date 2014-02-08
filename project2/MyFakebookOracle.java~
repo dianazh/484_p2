@@ -1,0 +1,123 @@
+package project2;
+
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.TreeSet;
+import java.util.Vector;
+
+public class MyFakebookOracle extends FakebookOracle {
+	
+	static String prefix = "yjtang.";
+	
+	// You must use the following variable as the JDBC connection
+	Connection oracleConnection = null;
+	
+	// You must refer to the following variables for the corresponding tables in your database
+	String cityTableName = null;
+	String userTableName = null;
+	String friendsTableName = null;
+	String currentCityTableName = null;
+	String hometownCityTableName = null;
+	String programTableName = null;
+	String educationTableName = null;
+	String eventTableName = null;
+	String participantTableName = null;
+	String albumTableName = null;
+	String photoTableName = null;
+	String coverPhotoTableName = null;
+	String tagTableName = null;
+	
+	
+	// DO NOT modify this constructor
+	public MyFakebookOracle(String u, Connection c) {
+		super();
+		String dataType = u;
+		oracleConnection = c;
+		// You will use the following tables in your Java code
+		cityTableName = prefix+dataType+"_CITIES";
+		userTableName = prefix+dataType+"_USERS";
+		friendsTableName = prefix+dataType+"_FRIENDS";
+		currentCityTableName = prefix+dataType+"_USER_CURRENT_CITY";
+		hometownCityTableName = prefix+dataType+"_USER_HOMETOWN_CITY";
+		programTableName = prefix+dataType+"_PROGRAMS";
+		educationTableName = prefix+dataType+"_EDUCATION";
+		eventTableName = prefix+dataType+"_USER_EVENTS";
+		albumTableName = prefix+dataType+"_ALBUMS";
+		photoTableName = prefix+dataType+"_PHOTOS";
+		tagTableName = prefix+dataType+"_TAGS";
+	}
+	
+	
+	@Override
+	// ***** Query 0 *****
+	// This query is given to your for free;
+	// You can use it as an example to help you write your own code
+	//
+	public void findMonthOfBirthInfo() throws SQLException{ 
+		
+		// Scrollable result set allows us to read forward (using next())
+		// and also backward.  
+		// This is needed here to support the user of isFirst() and isLast() methods,
+		// but in many cases you will not need it.
+		// To create a "normal" (unscrollable) statement, you would simply call
+		// Statement stmt = oracleConnection.createStatement();
+		//
+		Statement stmt = oracleConnection.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+		        ResultSet.CONCUR_READ_ONLY);
+		
+		// For each month, find the number of friends born that month
+		// Sort them in descending order of count
+		ResultSet rst = stmt.executeQuery("select count(*), month_of_birth from "+
+				userTableName+
+				" where month_of_birth is not null group by month_of_birth order by 1 desc");
+		
+		this.monthOfMostFriend = 0;
+		this.monthOfLeastFriend = 0;
+		this.totalFriendsWithMonthOfBirth = 0;
+		
+		// Get the month with most friends, and the month with least friends.
+		// (Notice that this only considers months for which the number of friends is > 0)
+		// Also, count how many total friends have listed month of birth (i.e., month_of_birth not null)
+		//
+		while(rst.next()) {
+			int count = rst.getInt(1);
+			int month = rst.getInt(2);
+			if (rst.isFirst())
+				this.monthOfMostFriend = month;
+			if (rst.isLast())
+				this.monthOfLeastFriend = month;
+			this.totalFriendsWithMonthOfBirth += count;
+		}
+		
+		// Get the names of friends born in the "most" month
+		rst = stmt.executeQuery("select user_id, first_name, last_name from "+
+				userTableName+" where month_of_birth="+this.monthOfMostFriend);
+		while(rst.next()) {
+			Long uid = rst.getLong(1);
+			String firstName = rst.getString(2);
+			String lastName = rst.getString(3);
+			this.friendsInMonthOfMost.add(new UserInfo(uid, firstName, lastName));
+		}
+		
+		// Get the names of friends born in the "least" month
+		rst = stmt.executeQuery("select first_name, last_name, user_id from "+
+				userTableName+" where month_of_birth="+this.monthOfLeastFriend);
+		while(rst.next()){
+			String firstName = rst.getString(1);
+			String lastName = rst.getString(2);
+			Long uid = rst.getLong(3);
+			this.friendsInMonthOfLeast.add(new UserInfo(uid, firstName, lastName));
+		}
+		
+		// Close statement and result set
+		rst.close();
+		stmt.close();
+	}
+
+	
+	
+
+	
+}
